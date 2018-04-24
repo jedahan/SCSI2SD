@@ -2,6 +2,7 @@ VPATH=cybootloaderutils ../SCSI2SD/src
 
 VERSION=4.4.0
 NAME=scsi2sd-util
+TARGET ?= $(shell uname -s)
 
 ifeq ($(USE_SYSTEM), Yes)
 USE_SYSTEM_HIDAPI = Yes
@@ -28,9 +29,16 @@ LIBZIPPER_CONFIG = --disable-shared LDFLAGS="-L../zlib" CPPFLAGS="-I../zlib"
 endif
 
 ifeq ($(USE_SYSTEM_WX),Yes)
-LDFLAGS_WX=$(shell wx-config-3.0 --libs)
+  ifeq ($(TARGET),Darwin)
+    LDFLAGS_WX=$(shell wx-config --libs)
+    CXXFLAGS_WX=$(shell wx-config --cxxflags)
+  else
+    LDFLAGS_WX=$(shell wx-config-3.0 --libs)
+    CXXFLAGS_WX=$(shell wx-config-3.0 --cxxflags)
+  endif
 else
-LDFLAGS_WX=$(shell $(BUILD)/wx/wx-config --libs)
+  LDFLAGS_WX=$(shell $(BUILD)/wx/wx-config --libs)
+  CXXFLAGS_WX=$(shell $(BUILD)/wx/wx-config --cxxflags)
 endif
 
 CPPFLAGS = -I cybootloaderutils $(CPPFLAGS_HIDAPI) -I. -I ../include -Ilibzipper-1.0.4 $(CPPFLAGS_ZLIB)
@@ -47,7 +55,6 @@ WX_CONFIG=--disable-webkit --disable-webviewwebkit  --disable-mediactrl \
 	--without-libtiff --without-libjbig --without-liblzma --without-opengl \
 	--enable-monolithic --enable-stl --disable-shared
 
-TARGET ?= $(shell uname -s)
 ifeq ($(TARGET),Win32)
 	VPATH += hidapi/windows
 	LDFLAGS += -static -mconsole -mwindows -lsetupapi
@@ -187,11 +194,7 @@ $(BUILD)/%.o: %.c
 
 $(BUILD)/%.o: %.cc
 	mkdir -p $(dir $@)
-ifneq ($(USE_SYSTEM_WX),Yes)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) `$(BUILD)/wx/wx-config --cxxflags` $< -c -o $@
-else
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) `wx-config-3.0 --cxxflags` $< -c -o $@
-endif
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(CXXFLAGS_WX) $< -c -o $@
 
 $(BUILD)/scsi2sd-util$(EXE): $(OBJ) $(BUILD)/scsi2sd-util.o
 	mkdir -p $(dir $@)
